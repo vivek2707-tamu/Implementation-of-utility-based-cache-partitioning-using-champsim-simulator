@@ -1,0 +1,17 @@
+Below are the trace files used for our simulations
+astar_23B.trace.xz                  
+bwaves_98B.trace.xz
+bzip2_183B.trace.xz
+cactusADM_734B.trace.xz
+lbm_94B.trace.xz
+h264ref_178B.trace.xz 
+soplex_66B.trace.xz          
+sjeng_358B.trace.xz           
+povray_250B.trace.xz
+omnetpp_4B.trace.xz      
+perlbench_53B.trace.xz
+gcc_13B.trace.xz  
+gamess_196B.trace.xz
+gromacs_0B.trace.xz
+leslie3d_94B.trace.xz
+hmmer_7B.trace.xz
