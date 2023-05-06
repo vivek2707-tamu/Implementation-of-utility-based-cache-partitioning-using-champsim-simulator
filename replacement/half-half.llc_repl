@@ -1,0 +1,130 @@
+#include "cache.h"
+#include "uncore.h"
+#include "ooo_cpu.h"
+// initialize replacement state
+void CACHE::llc_initialize_replacement()
+{
+
+}
+// find replacement victim
+uint32_t CACHE::llc_find_victim(uint32_t cpu, uint64_t instr_id, uint32_t set, const BLOCK *current_set, uint64_t ip, uint64_t full_addr, uint32_t type)
+{
+    // baseline LRU
+    uint32_t WAY = 0;
+    // Initially checking any invalid way in the set to evict
+    for (WAY=0; WAY<NUM_WAY; WAY++) {
+        if (block[set][WAY].valid == false) {
+            //cout << way <<"afgn";
+    
+            DP ( if (warmup_complete[cpu]) {
+            cout << "[" << NAME << "] " << __func__ << " INSTRUCTION_ID: " << instr_id << " INVALID SET: " << set << " WAY: " << way;
+            cout << hex << " ADDRESS: " << (full_addr>>LOG2_BLOCK_SIZE) << " VICTIM ADDRESS: " << block[set][WAY].address << " DATA: " << block[set][way].data;
+            cout << dec << " LRU: " << block[set][WAY].lru << endl; });
+
+            break;
+        }
+    }
+    // LRU victim
+    //cout << way<< " "<< NUM_WAY;
+    uint32_t MAX_LRU;
+    uint32_t return_way;
+    if (WAY == NUM_WAY) {
+     
+      MAX_LRU = 0;
+      return_way = 17;  
+      
+            for (WAY=0; WAY<NUM_WAY; WAY++) //Finding the way that is least recently used which is brought up to LLC by a particular CPU
+               {
+                if (block[set][WAY].cpu==cpu && block[set][WAY].lru >= MAX_LRU)  {
+                    DP ( if (warmup_complete[cpu]) {
+		    MAX_LRU = block[set][WAY].lru;
+		    return_way = WAY;
+		
+	      
+	    	if (return_way != 17) {
+                    cout << "[" << NAME << "] " << __func__ << " INSTRUCTION_ID: " << instr_id << " REPLACE SET: " << set << " WAY: " << return_way;
+                    cout << hex << " ADDRESS: " << (full_addr>>LOG2_BLOCK_SIZE) << " VICTIM ADDRESS: " << block[set][return_way].address << " DATA: " << block[set][return_way].data;
+                    cout << dec << " LRU: " << block[set][return_way].lru << endl; }
+        	});
+	      }
+	    }
+	 }
+    
+    if (WAY == NUM_WAY) {
+        cerr << "[" << NAME << "] " << __func__ << " NO VICTIM! SET: " << set  << endl;
+        for (int j=0;j<NUM_WAY;j++)
+        {
+            cerr << "CPU: " << block[set][j].cpu << " LRU: "<< block[set][j].lru << " VALID: " << block[set][j].valid<<"REQUESTED: "<<cpu <<endl;
+        }
+        assert(0);
+    }
+     WAY = return_way;
+     return WAY;
+}
+
+// called on every cache hit and cache fill
+void CACHE::llc_update_replacement_state(uint32_t cpu, uint32_t set, uint32_t way, uint64_t full_addr, uint64_t ip, uint64_t victim_addr, uint32_t type, uint8_t hit)
+{
+    string TYPE_NAME;
+    if (type == LOAD)
+        TYPE_NAME = "LOAD";
+    else if (type == RFO)
+        TYPE_NAME = "RFO";
+    else if (type == PREFETCH)
+        TYPE_NAME = "PF";
+    else if (type == WRITEBACK)
+        TYPE_NAME = "WB";
+    else
+        assert(0);
+
+    if (hit)
+        TYPE_NAME += "_HIT";
+    else
+        TYPE_NAME += "_MISS";
+
+    if ((type == WRITEBACK) && ip)
+        assert(0);
+
+    // uncomment this line to see the LLC accesses
+    // cout << "CPU: " << cpu << "  LLC " << setw(9) << TYPE_NAME << " set: " << setw(5) << set << " way: " << setw(2) << way;
+    // cout << hex << " paddr: " << setw(12) << paddr << " ip: " << setw(8) << ip << " victim_addr: " << victim_addr << dec << endl;
+
+    // baseline LRU
+    if (hit && (type == WRITEBACK)) // writeback hit does not update LRU state
+        return;
+        
+    //uncore.UpdatePartition();
+    // for (int i=0;i<NUM_CPUS;i++)
+    // {
+    //     cout << uncore.wayAllocated[i] <<" "<<current_core_cycle[i]<<" ";
+    // }
+    // cout <<"\n";
+    if (hit==0)
+    {
+        block[set][way].lru=UINT32_MAX;
+    }
+    // for (int cc=0;cc<NUM_CPUS;cc++)
+    // {
+    //     cout << cc << ":\n";
+    //     for (int i=0;i<LLC_WAY;i++)
+    //     {
+    //         cout << ooo_cpu[cc].TagDirectory.UMON_Global[i]<<" ";
+    //     }
+    //     cout << "\n";
+    // }
+    //cout << cpu << " " << block[set][way].cpu << " " << hit <<endl;
+    for (uint32_t i=0; i<NUM_WAY; i++) //Incrementing the LRU of all the ways which are less than the LRU of the mostly recently accessed way
+      {
+        if (block[set][i].lru < block[set][way].lru && block[set][i].cpu==cpu) {
+            block[set][i].lru++;
+            
+        }
+    }
+    block[set][way].lru = 0; // Updating the way to the mostly recently used position
+    //return lru_update(set, way);
+}
+
+void CACHE::llc_replacement_final_stats()
+{
+
+}
